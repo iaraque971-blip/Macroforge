@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MacroForge — Calculadora de Macros</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d0d0f;
+    --bg-card: #16161a;
+    --bg-card-2: #1c1c22;
+    --line: #2a2a32;
+    --ember: #ff4d23;
+    --ember-dim: #ff4d2333;
+    --ice: #3ec6ff;
+    --text: #f4f1ea;
+    --text-dim: #8d8d97;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    position: relative;
+  }
+
+  /* Texture: faint diagonal hatch like gym flooring */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(135deg, #ffffff05 0px, #ffffff05 1px, transparent 1px, transparent 14px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ember);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 34px;
+    line-height: 1.05;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .sub {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .field { flex: 1; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-bottom: 7px;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--bg-card-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus { border-color: var(--ember); }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .seg {
+    display: flex;
+    background: var(--bg-card-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .seg button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .seg button.active {
+    background: var(--ember);
+    color: #1a0a04;
+  }
+
+  .seg.three button { font-size: 13px; }
+
+  .activity-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .activity-opt {
+    background: var(--bg-card-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.15s;
+  }
+  .activity-opt.active {
+    border-color: var(--ember);
+    background: var(--ember-dim);
+  }
+  .activity-opt .name { font-size: 14px; font-weight: 600; }
+  .activity-opt .desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .activity-opt .dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+    margin-left: 12px;
+    position: relative;
+  }
+  .activity-opt.active .dot { border-color: var(--ember); }
+  .activity-opt.active .dot::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--ember);
+  }
+
+  .calc-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--ember), #ff7a3d);
+    border: none;
+    border-radius: 12px;
+    padding: 17px;
+    color: #1a0a04;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: transform 0.1s;
+  }
+  .calc-btn:active { transform: scale(0.98); }
+
+  /* RESULTS */
+  #results { display: none; }
+  #results.show { display: block; animation: rise 0.4s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .plate-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0 20px;
+  }
+  .plate {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+  .plate svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .plate-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .plate-cal {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 38px;
+    line-height: 1;
+  }
+  .plate-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .macro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .macro-box {
+    background: var(--bg-card-2);
+    border-radius: 12px;
+    padding: 14px 8px;
+    text-align: center;
+    border-top: 3px solid var(--macro-color, var(--ember));
+  }
+  .macro-box .val {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 22px;
+  }
+  .macro-box .unit { font-size: 11px; color: var(--text-dim); }
+  .macro-box .name {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-weight: 600;
+  }
+
+  .reco-box {
+    background: var(--bg-card-2);
+    border-left: 3px solid var(--ice);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13.5px;
+    color: #d6e9f5;
+    line-height: 1.55;
+  }
+  .reco-box b { color: var(--ice); }
+
+  .footer-note {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 28px;
+    line-height: 1.6;
+  }
+  .footer-note .brand {
+    color: var(--ember);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Calculadora de Macros</div>
+  <h1>MacroForge</h1>
+  <p class="sub">Ingresa tus datos y obtén tus calorías y macros diarios, ajustados a tu objetivo.</p>
+
+  <div class="card">
+    <div class="field-row">
+      <div class="field">
+        <label>Sexo</label>
+        <div class="seg" id="sexSeg">
+          <button class="active" data-val="male">Hombre</button>
+          <button data-val="female">Mujer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Edad</label>
+        <input type="number" id="age" placeholder="25" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>Peso (kg)</label>
+        <input type="number" id="weight" placeholder="70" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>Altura (cm)</label>
+        <input type="number" id="height" placeholder="170" inputmode="numeric">
+      </div>
+    </div>
+
+    <label style="margin-top: 6px;">Nivel de actividad</label>
+    <div class="activity-options" id="activityOpts">
+      <div class="activity-opt active" data-val="1.2">
+        <div><div class="name">Sedentario</div><div class="desc">Poco o nada de ejercicio</div></div>
+        <div class="dot"></div>
+      </div>
+      <div class="activity-opt" data-val="1.375">
+        <div><div class="name">Ligero</div><div class="desc">Ejercicio 1–3 días/semana</div></div>
+        <div class="dot"></div>
+      </div>
+      <div class="activity-opt" data-val="1.55">
+        <div><div class="name">Moderado</div><div class="desc">Ejercicio 3–5 días/semana</div></div>
+        <div class="dot"></div>
+      </div>
+      <div class="activity-opt" data-val="1.725">
+        <div><div class="name">Intenso</div><div class="desc">Ejercicio 6–7 días/semana</div></div>
+        <div class="dot"></div>
+      </div>
+      <div class="activity-opt" data-val="1.9">
+        <div><div class="name">Atleta</div><div class="desc">Entrenamiento 2x al día</div></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <label style="margin-top: 16px;">Objetivo</label>
+    <div class="seg three" id="goalSeg">
+      <button data-val="lose">Bajar grasa</button>
+      <button class="active" data-val="maintain">Mantener</button>
+      <button data-val="gain">Subir músculo</button>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">Calcular mis macros</button>
+  </div>
+
+  <div id="results">
+    <div class="card">
+      <div class="plate-wrap">
+        <div class="plate">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="44" fill="none" stroke="#2a2a32" stroke-width="9"/>
+            <circle id="plateRing" cx="50" cy="50" r="44" fill="none" stroke="#ff4d23" stroke-width="9"
+              stroke-dasharray="276.5" stroke-dashoffset="276.5" stroke-linecap="round"
+              style="transition: stroke-dashoffset 1s ease;"/>
+          </svg>
+          <div class="plate-center">
+            <div class="plate-cal" id="calOut">0</div>
+            <div class="plate-label">kcal / día</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="macro-grid">
+        <div class="macro-box" style="--macro-color:#ff4d23">
+          <div class="val" id="proteinOut">0<span class="unit">g</span></div>
+          <div class="name">Proteína</div>
+        </div>
+        <div class="macro-box" style="--macro-color:#3ec6ff">
+          <div class="val" id="carbsOut">0<span class="unit">g</span></div>
+          <div class="name">Carbos</div>
+        </div>
+        <div class="macro-box" style="--macro-color:#ffd23e">
+          <div class="val" id="fatOut">0<span class="unit">g</span></div>
+          <div class="name">Grasas</div>
+        </div>
+      </div>
+
+      <div class="reco-box" id="recoOut"></div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Cálculo basado en la fórmula Mifflin-St Jeor.<br>
+    <span class="brand">MacroForge</span> — Resultados orientativos, no sustituyen asesoría nutricional profesional.
+  </div>
+
+</div>
+
+<script>
+  let sex = 'male';
+  let activity = 1.2;
+  let goal = 'maintain';
+
+  document.querySelectorAll('#sexSeg button').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('#sexSeg button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sex = btn.dataset.val;
+    };
+  });
+
+  document.querySelectorAll('.activity-opt').forEach(opt => {
+    opt.onclick = () => {
+      document.querySelectorAll('.activity-opt').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      activity = parseFloat(opt.dataset.val);
+    };
+  });
+
+  document.querySelectorAll('#goalSeg button').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('#goalSeg button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      goal = btn.dataset.val;
+    };
+  });
+
+  function calculate() {
+    const age = parseFloat(document.getElementById('age').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+
+    if (!age || !weight || !height) {
+      alert('Por favor completa edad, peso y altura.');
+      return;
+    }
+
+    // Mifflin-St Jeor
+    let bmr;
+    if (sex === 'male') {
+      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+    }
+
+    let tdee = bmr * activity;
+    let calories, proteinPerKg, fatPct, recoText;
+
+    if (goal === 'lose') {
+      calories = tdee - 450;
+      proteinPerKg = 2.2;
+      fatPct = 0.25;
+      recoText = '<b>Déficit moderado de ~450 kcal/día.</b> Prioriza la proteína para conservar masa muscular durante la pérdida de grasa. Si en 2 semanas no ves bajada de peso, reduce 150-200 kcal adicionales.';
+    } else if (goal === 'gain') {
+      calories = tdee + 350;
+      proteinPerKg = 2.0;
+      fatPct = 0.25;
+      recoText = '<b>Superávit de ~350 kcal/día</b> para ganar músculo minimizando grasa extra. Acompaña con entrenamiento de fuerza progresivo. Si subes más de 0.5 kg/semana, podrías estar ganando demasiada grasa.';
+    } else {
+      calories = tdee;
+      proteinPerKg = 1.8;
+      fatPct = 0.28;
+      recoText = '<b>Calorías de mantenimiento.</b> Ideal para recomposición corporal lenta o estabilizar peso. Ajusta ±100 kcal según cómo respondan tu peso y energía en 2-3 semanas.';
+    }
+
+    const protein = Math.round(proteinPerKg * weight);
+    const fatGrams = Math.round((calories * fatPct) / 9);
+    const remainingCals = calories - (protein * 4) - (fatGrams * 9);
+    const carbs = Math.round(remainingCals / 4);
+
+    calories = Math.round(calories);
+
+    document.getElementById('calOut').textContent = calories;
+    document.getElementById('proteinOut').innerHTML = protein + '<span class="unit">g</span>';
+    document.getElementById('carbsOut').innerHTML = carbs + '<span class="unit">g</span>';
+    document.getElementById('fatOut').innerHTML = fatGrams + '<span class="unit">g</span>';
+    document.getElementById('recoOut').innerHTML = recoText;
+
+    const results = document.getElementById('results');
+    results.classList.add('show');
+
+    // Animate ring (circumference for r=44 is ~276.5)
+    const ring = document.getElementById('plateRing');
+    ring.style.strokeDashoffset = '276.5';
+    setTimeout(() => { ring.style.strokeDashoffset = '20'; }, 50);
+
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+</script>
+</body>
+</html>
